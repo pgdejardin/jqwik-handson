@@ -1,12 +1,21 @@
 package fr.xebia.jqwik.exercise3;
 
+import net.jqwik.api.Arbitrary;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
+import net.jqwik.api.Provide;
 
+import java.util.Collection;
+
+import static java.util.Arrays.asList;
+import static net.jqwik.api.Arbitraries.strings;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
 class AlertRoutingServiceTest {
+
+    private static final Collection<String> COUNTRIES_WITH_SPECIFIC_SERVICES = asList("IT", "US");
 
     private final NotificationServiceForItaly notificationServiceForItaly = mock(NotificationServiceForItaly.class);
     private final NotificationServiceForUsa notificationServiceForUsa = mock(NotificationServiceForUsa.class);
@@ -43,15 +52,21 @@ class AlertRoutingServiceTest {
      * <p>Hint #3: Calling Mockito.reset(defaultNotificationService) is necessary, and it does not work from JUnit-lifecycle methods :(</p>
      */
     @Property
-    void should_send_alert_message_to_default_service_for_alert_of_standard_country(@ForAll Alert.Type type) {
-        final String country = "JP";
+    void should_send_alert_message_to_default_service_for_alert_of_standard_country(@ForAll Alert.Type type, @ForAll("standardCountries") String country) {
         final Alert alert = new Alert(type, country);
 
+        reset(defaultNotificationService);
         routingService.send(alert);
 
         then(notificationServiceForItaly).shouldHaveZeroInteractions();
         then(notificationServiceForUsa).shouldHaveZeroInteractions();
         then(defaultNotificationService).should().notify(type.getDefaultMessage());
+    }
+
+    @Provide
+    Arbitrary<String> standardCountries() {
+        return strings()
+                .filter(code -> !COUNTRIES_WITH_SPECIFIC_SERVICES.contains(code));
     }
 
 }
